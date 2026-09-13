@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="imperial">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RAGHAV JHA // IMPERIAL DATANET</title>
+<meta name="description" content="Raghav Jha — security engineer, embedded systems, full-stack. Founding engineer at Aptosi.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='44' fill='none' stroke='%23ff2d2d' stroke-width='7'/><circle cx='50' cy='50' r='10' fill='%23ff2d2d'/><path d='M6 50h88M50 6v88' stroke='%23ff2d2d' stroke-width='5'/></svg>">
+</head>
+<body>
+
+<!-- ============ WEBGL HYPERSPACE ============ -->
+<canvas id="gl" aria-hidden="true"></canvas>
+<div class="vignette" aria-hidden="true"></div>
+<div class="scanlines" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<!-- ============ BOOT SEQUENCE ============ -->
+<div id="boot" role="dialog" aria-label="System boot">
+  <div class="boot-inner">
+    <pre class="boot-sigil" aria-hidden="true">        ▄▄▄▄▄▄▄
+     ▄█▀▀     ▀▀█▄
+   ▄█▀  ▄▄███▄▄  ▀█▄
+  █▀  ▄█▀     ▀█▄  ▀█
+ █▌  █▌  ▄███▄  ▐█  ▐█
+ █▌  █▌ █▌   ▐█ ▐█  ▐█
+ █▌  █▌  ▀███▀  ▐█  ▐█
+  █▄  ▀█▄     ▄█▀  ▄█
+   ▀█▄  ▀▀███▀▀  ▄█▀
+     ▀█▄▄     ▄▄█▀
+        ▀▀▀▀▀▀▀</pre>
+    <div class="boot-log" id="bootLog" aria-live="polite"></div>
+    <button id="bootEnter" class="boot-enter" hidden>
+      <span class="be-brackets">[</span> ENGAGE <span class="be-brackets">]</span>
+    </button>
+    <button id="bootSkip" class="boot-skip">skip →</button>
+  </div>
+</div>
+
+<!-- ============ HUD FRAME ============ -->
+<div class="hud" aria-hidden="true">
+  <span class="hud-c tl"></span><span class="hud-c tr"></span>
+  <span class="hud-c bl"></span><span class="hud-c br"></span>
+  <div class="hud-readout">
+    <div><b>SECTOR</b> M-04 / CORUSCANT</div>
+    <div><b>CLEARANCE</b> OMEGA</div>
+    <div><b>SCROLL</b> <span id="hudPct">000</span>%</div>
+  </div>
+  <div class="hud-saber"><i id="saberFill"></i></div>
+</div>
+
+<!-- ============ NAV ============ -->
+<header class="nav" id="nav">
+  <a class="brand" href="#top" data-nav>
+    <svg viewBox="0 0 100 100" class="brand-mark" aria-hidden="true">
+      <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="5"/>
+      <circle cx="50" cy="50" r="9" fill="currentColor"/>
+      <path d="M8 50h84M50 8v84" stroke="currentColor" stroke-width="4"/>
+      <circle cx="50" cy="50" r="24" fill="none" stroke="currentColor" stroke-width="2" opacity=".6"/>
+    </svg>
+    <span>R.JHA</span>
+  </a>
+  <nav class="nav-links" aria-label="Primary">
+    <a href="#crawl" data-nav>ORIGIN</a>
+    <a href="#dossier" data-nav>DOSSIER</a>
+    <a href="#arsenal" data-nav>ARSENAL</a>
+    <a href="#missions" data-nav>MISSIONS</a>
+    <a href="#transmit" data-nav>TRANSMIT</a>
+  </nav>
+  <div class="nav-ctl">
+    <button id="sfxBtn" class="icon-btn" aria-pressed="false" title="Audio: synthesized">
+      <span class="sfx-on">◉ SFX</span>
+    </button>
+    <button id="menuBtn" class="icon-btn burger" aria-expanded="false" aria-label="Menu"><i></i><i></i><i></i></button>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ============ HERO ============ -->
+<section class="hero" id="hero">
+  <div class="hero-grid" aria-hidden="true"></div>
+
+  <div class="hero-ds" aria-hidden="true">
+    <svg viewBox="-110 -110 220 220" class="ds-svg" id="deathstar">
+      <defs>
+        <radialGradient id="dsg" cx="35%" cy="30%">
+          <stop offset="0%" stop-color="#3b0d0d"/>
+          <stop offset="60%" stop-color="#140404"/>
+          <stop offset="100%" stop-color="#050101"/>
+        </radialGradient>
+      </defs>
+      <circle r="100" fill="url(#dsg)" stroke="#ff2d2d" stroke-width="1.1" opacity=".95"/>
+      <g class="ds-lines" fill="none" stroke="#ff2d2d" stroke-width="1" opacity=".75">
+        <ellipse rx="100" ry="34"/><ellipse rx="100" ry="66"/><ellipse rx="100" ry="90"/>
+        <ellipse rx="34" ry="100"/><ellipse rx="66" ry="100"/><ellipse rx="90" ry="100"/>
+        <path d="M-100 -8H100M-100 8H100"/>
+      </g>
+      <g class="ds-dish">
+        <circle cx="-34" cy="-44" r="24" fill="#0b0202" stroke="#ff2d2d" stroke-width="1"/>
+        <circle cx="-34" cy="-44" r="15" fill="none" stroke="#ff5a5a" stroke-width=".8" opacity=".8"/>
+        <circle cx="-34" cy="-44" r="6" fill="#ff2d2d" class="ds-core"/>
+      </g>
+      <circle r="100" fill="none" stroke="#ff2d2d" stroke-width=".4" opacity=".35" class="ds-halo"/>
+    </svg>
+  </div>
+
+  <div class="hero-body">
+    <p class="kicker"><i></i> TRANSMISSION ORIGIN — NORTH YORK, TORONTO</p>
+    <h1 class="title" data-glitch="RAGHAV JHA">
+      <span>RAGHAV</span><span class="tl2">JHA</span>
+    </h1>
+    <p class="subtitle">
+      <span class="tw" data-words="SECURITY ENGINEER|EMBEDDED SYSTEMS|FULL-STACK|FOUNDING ENGINEER @ APTOSI"></span><b class="caret">_</b>
+    </p>
+    <p class="lede">
+      I break systems on purpose so they cannot be broken by accident. Application security,
+      firmware that runs in real time, and products shipped end-to-end — one stack, three disciplines.
+    </p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="#missions" data-nav>VIEW MISSIONS</a>
+      <a class="btn" href="#transmit" data-nav>OPEN CHANNEL</a>
+    </div>
+    <div class="hero-stats">
+      <div><b>4</b><span>REPOS UNDER SAST</span></div>
+      <div><b>TIER II</b><span>GOOGLE CASA</span></div>
+      <div><b>2027</b><span>B.SE — SENECA</span></div>
+    </div>
+  </div>
+
+  <a class="scroll-cue" href="#crawl" data-nav aria-label="Scroll">
+    <span></span><i>DESCEND</i>
+  </a>
+</section>
+
+<!-- ============ OPENING CRAWL ============ -->
+<section class="crawl-sec" id="crawl">
+  <div class="crawl-badge">EPISODE III — <em>THE SECURITY OF THE REALM</em></div>
+  <div class="crawl-stage">
+    <div class="crawl-text" id="crawlText">
+      <h2>A NEW THREAT</h2>
+      <p>It is a period of digital war. Fraudulent invoices move through the accounts payable systems of a thousand worlds, draining treasuries before anyone notices the signature is wrong.</p>
+      <p>From a seed-stage outpost called APTOSI, a founding engineer builds the countermeasures — static analysis that halts a corrupted pull request before it merges, authenticated scans that surface injection flaws before an adversary does.</p>
+      <p>Meanwhile, on the training worlds of SENECA POLYTECHNIC, he writes firmware that must answer in microseconds, and teaches neural networks to see what human reviewers miss.</p>
+      <p>Pursued by deadlines and compliance labs alike, he continues his work — because the perimeter only holds if someone keeps testing it...</p>
+    </div>
+  </div>
+  <div class="crawl-fade" aria-hidden="true"></div>
+</section>
+
+<!-- ============ DOSSIER ============ -->
+<section class="sec" id="dossier">
+  <div class="sec-head">
+    <span class="sec-no">01</span>
+    <h2>PERSONNEL DOSSIER</h2>
+    <span class="sec-rule"></span>
+  </div>
+
+  <div class="dossier">
+    <article class="panel panel-lg reveal">
+      <header class="panel-bar"><span>FILE // JHA_R</span><span class="blink">● LIVE</span></header>
+      <div class="panel-body">
+        <p class="big">Third-year <b>Software Engineering</b> student at Seneca Polytechnic in Toronto, and a
+        <b>founding engineer</b> at Aptosi — a seed-stage fintech fighting invoice fraud and verifying vendors.</p>
+        <p>My work sits where three disciplines overlap: <b>application security</b> (CASA Tier II assessments,
+        authenticated DAST, SAST wired into CI so critical findings block the merge), <b>embedded systems</b>
+        (FreeRTOS on NXP Kinetis, DMA-fed audio pipelines, sensor buses that cannot drop a sample), and
+        <b>full-stack product work</b> (SvelteKit, TypeScript, Python, Firebase).</p>
+        <p>Originally from Himmatnagar, Gujarat. Currently operating out of North York, Toronto.
+        Graduating 2027 and looking for the next system worth hardening.</p>
+        <div class="chips">
+          <span>OWASP ZAP</span><span>SAST / DAST</span><span>OAuth 2.0</span><span>FreeRTOS</span>
+          <span>SvelteKit</span><span>FastAPI</span><span>TypeScript</span><span>Python</span>
+          <span>PostgreSQL</span><span>Firebase</span><span>GitHub Actions</span><span>Docker</span>
+        </div>
+      </div>
+    </article>
+
+    <div class="dossier-side">
+      <article class="panel reveal">
+        <header class="panel-bar"><span>VITALS</span></header>
+        <ul class="kv">
+          <li><span>DESIGNATION</span><b>Raghav Jha</b></li>
+          <li><span>RANK</span><b>Founding Engineer</b></li>
+          <li><span>POST</span><b>Aptosi — Fintech</b></li>
+          <li><span>ACADEMY</span><b>Seneca Polytechnic</b></li>
+          <li><span>SECTOR</span><b>Toronto, ON</b></li>
+          <li><span>STATUS</span><b class="ok">Open to offers</b></li>
+        </ul>
+      </article>
+
+      <article class="panel reveal">
+        <header class="panel-bar"><span>THREAT ASSESSMENT</span></header>
+        <div class="panel-body radar-wrap">
+          <canvas id="radar" width="440" height="440" aria-label="Skill radar chart"></canvas>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ARSENAL ============ -->
+<section class="sec" id="arsenal">
+  <div class="sec-head">
+    <span class="sec-no">02</span>
+    <h2>ARSENAL</h2>
+    <span class="sec-rule"></span>
+  </div>
+
+  <div class="arsenal">
+    <article class="panel reveal">
+      <header class="panel-bar"><span>◈ OFFENSIVE SECURITY</span></header>
+      <div class="panel-body bars">
+        <div class="bar" data-v="92"><span>Application Security</span><i></i></div>
+        <div class="bar" data-v="88"><span>DAST · OWASP ZAP</span><i></i></div>
+        <div class="bar" data-v="85"><span>SAST in CI/CD</span><i></i></div>
+        <div class="bar" data-v="80"><span>Email Auth — SPF/DKIM/DMARC</span><i></i></div>
+      </div>
+    </article>
+    <article class="panel reveal">
+      <header class="panel-bar"><span>◈ EMBEDDED / FIRMWARE</span></header>
+      <div class="panel-body bars">
+        <div class="bar" data-v="90"><span>FreeRTOS · Kinetis K66F</span><i></i></div>
+        <div class="bar" data-v="86"><span>DMA · I2S/SAI Audio</span><i></i></div>
+        <div class="bar" data-v="84"><span>I2C · SPI · UART</span><i></i></div>
+        <div class="bar" data-v="78"><span>Sensor Integration (ToF, IMU)</span><i></i></div>
+      </div>
+    </article>
+    <article class="panel reveal">
+      <header class="panel-bar"><span>◈ FULL-STACK</span></header>
+      <div class="panel-body bars">
+        <div class="bar" data-v="89"><span>TypeScript · SvelteKit</span><i></i></div>
+        <div class="bar" data-v="87"><span>Python · FastAPI</span><i></i></div>
+        <div class="bar" data-v="82"><span>PostgreSQL · Firestore</span><i></i></div>
+        <div class="bar" data-v="80"><span>Docker · GitHub Actions</span><i></i></div>
+      </div>
+    </article>
+    <article class="panel reveal">
+      <header class="panel-bar"><span>◈ MACHINE LEARNING</span></header>
+      <div class="panel-body bars">
+        <div class="bar" data-v="83"><span>CNNs · VGG16 Transfer Learning</span><i></i></div>
+        <div class="bar" data-v="76"><span>CBAM Attention</span><i></i></div>
+        <div class="bar" data-v="72"><span>RNN / LSTM</span><i></i></div>
+        <div class="bar" data-v="68"><span>Reinforcement Learning</span><i></i></div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- ============ MISSIONS ============ -->
+<section class="sec" id="missions">
+  <div class="sec-head">
+    <span class="sec-no">03</span>
+    <h2>MISSION LOG</h2>
+    <span class="sec-rule"></span>
+  </div>
+
+  <div class="missions">
+
+    <article class="holo reveal" data-tilt>
+      <div class="holo-scan" aria-hidden="true"></div>
+      <div class="holo-top">
+        <span class="holo-id">MSN-318</span>
+        <span class="holo-flag crit">CRITICAL</span>
+      </div>
+      <h3>OPERATION: CASA TIER II</h3>
+      <p class="holo-sub">Google Cloud security assessment · Aptosi</p>
+      <p>Drove Aptosi through Google's CASA Tier II compliance assessment end to end. Ran authenticated
+      OWASP ZAP scans against production surfaces and surfaced <b>HIGH-severity server-side template
+      injection and SQL injection</b>, plus a PII disclosure path. Wrote the formal assessment reports,
+      coordinated with the external lab, and tracked every finding to remediation.</p>
+      <ul class="holo-tags"><li>OWASP ZAP</li><li>SSTI / SQLi</li><li>Threat Reporting</li><li>Remediation</li></ul>
+    </article>
+
+    <article class="holo reveal" data-tilt>
+      <div class="holo-scan" aria-hidden="true"></div>
+      <div class="holo-top"><span class="holo-id">MSN-292</span><span class="holo-flag">SHIPPED</span></div>
+      <h3>THE BLOCKADE</h3>
+      <p class="holo-sub">Automated SAST gate · 4 repositories</p>
+      <p>Wired Votal.ai static analysis into a GitHub Actions pipeline across all four Aptosi
+      repositories. Critical findings now <b>block the pull request</b> rather than landing in a
+      dashboard nobody reads — security moved from a quarterly audit to a merge-time contract.</p>
+      <ul class="holo-tags"><li>GitHub Actions</li><li>SAST</li><li>CI/CD</li><li>Policy as Code</li></ul>
+    </article>
+
+    <article class="holo reveal" data-tilt>
+      <div class="holo-scan" aria-hidden="true"></div>
+      <div class="holo-top"><span class="holo-id">MSN-207</span><span class="holo-flag">ACTIVE</span></div>
+      <h3>TRADE FEDERATION LINK</h3>
+      <p class="holo-sub">QuickBooks Online integration · OAuth 2.0</p>
+      <p>Built and hardened Aptosi's Intuit/QuickBooks Online integration — OAuth 2.0 authorization
+      flows, launch and disconnect URLs, webhook subscriptions, and the migration onto Intuit's
+      CloudEvents payload format. Accounts-payable data crossing a trust boundary, safely.</p>
+      <ul class="holo-tags"><li>OAuth 2.0</li><li>Webhooks</li><li>Intuit API</li><li>Fintech</li></ul>
+    </article>
+
+    <article class="holo reveal" data-tilt>
+      <div class="holo-scan" aria-hidden="true"></div>
+      <div class="holo-top"><span class="holo-id">MSN-101</span><span class="holo-flag">BUILDING</span></div>
+      <h3>CYRAVENT</h3>
+      <p class="holo-sub">AI-powered enterprise security platform</p>
+      <p>A multi-tenant security intelligence SaaS built milestone by milestone from a full engineering
+      spec: Next.js + TypeScript front end, FastAPI + PostgreSQL + Redis backend, a provider-agnostic AI
+      service layer, Docker throughout. Strictly defensive, with RBAC, audit logging, and tenant-isolation
+      tests as first-class requirements.</p>
+      <ul class="holo-tags"><li>Next.js</li><li>FastAPI</li><li>PostgreSQL</li><li>Multi-tenant</li><li>RBAC</li></ul>
+    </article>
+
+    <article class="holo reveal" data-tilt>
+      <div class="holo-scan" aria-hidden="true"></div>
+      <div class="holo-top"><span class="holo-id">MSN-600</span><span class="holo-flag">FIELD</span></div>
+      <h3>REAL-TIME ACQUISITION</h3>
+      <p class="holo-sub">FRDM-K66F · FreeRTOS · bare-metal timing</p>
+      <p>Real-time data acquisition on NXP Kinetis hardware: ADC sampling under FreeRTOS with DMA-fed
+      ring buffers, I2S/SAI audio output, and time-of-flight plus gyroscope sensors on I2C. The kind of
+      code where a missed deadline is not a warning — it is a wrong answer.</p>
+      <ul class="holo-tags"><li>FreeRTOS</li><li>DMA</li><li>I2S / SAI</li><li>C</li><li>Ring Buffers</li></ul>
+    </article>
+
+    <article class="holo reveal" data-tilt>
+      <div class="holo-scan" aria-hidden="true"></div>
+      <div class="holo-top"><span class="holo-id">MSN-044</span><span class="holo-flag">RESEARCH</span></div>
+      <h3>SEEING MACHINES</h3>
+      <p class="holo-sub">CNNs · transfer learning · attention</p>
+      <p>Computer-vision work built on VGG16 transfer learning with CBAM attention blocks, alongside
+      recurrent models and reinforcement-learning experiments. The half of my stack that guesses, sitting
+      next to the half that must never guess.</p>
+      <ul class="holo-tags"><li>VGG16</li><li>CBAM</li><li>LSTM</li><li>RL</li></ul>
+    </article>
+
+  </div>
+</section>
+
+<!-- ============ HYPERSPACE ROUTE / TIMELINE ============ -->
+<section class="sec" id="route">
+  <div class="sec-head">
+    <span class="sec-no">04</span>
+    <h2>HYPERSPACE ROUTE</h2>
+    <span class="sec-rule"></span>
+  </div>
+  <ol class="route">
+    <li class="reveal"><span class="route-y">2027</span><div><b>GRADUATION — B.SE</b><p>Bachelor of Software Engineering, Seneca Polytechnic, Newnham Campus.</p></div></li>
+    <li class="reveal"><span class="route-y">2026</span><div><b>CASA TIER II + SAST GATE</b><p>Led Aptosi's Google CASA Tier II assessment; shipped merge-blocking static analysis across four repositories.</p></div></li>
+    <li class="reveal"><span class="route-y">2026</span><div><b>CYRAVENT MILESTONE I</b><p>Public platform surface built and verified; FastAPI backend skeleton with RBAC and tenant isolation next.</p></div></li>
+    <li class="reveal"><span class="route-y">2025</span><div><b>FOUNDING ENGINEER — APTOSI</b><p>Joined a seed-stage fintech building invoice fraud detection and vendor verification. Integrations, security, full-stack.</p></div></li>
+    <li class="reveal"><span class="route-y">2024</span><div><b>EMBEDDED + ML DEPTH</b><p>FreeRTOS firmware on Kinetis hardware; CNN and attention-based vision research at Seneca.</p></div></li>
+    <li class="reveal"><span class="route-y">2023</span><div><b>ARRIVAL — TORONTO</b><p>From Himmatnagar, Gujarat to North York. Software Engineering at Seneca begins.</p></div></li>
+  </ol>
+</section>
+
+<!-- ============ TRANSMIT ============ -->
+<section class="sec" id="transmit">
+  <div class="sec-head">
+    <span class="sec-no">05</span>
+    <h2>OPEN A CHANNEL</h2>
+    <span class="sec-rule"></span>
+  </div>
+
+  <div class="comms">
+    <div class="panel comms-panel reveal">
+      <header class="panel-bar"><span>SECURE COMMS</span><span class="blink">● ENCRYPTED</span></header>
+      <div class="panel-body">
+        <p class="big">Hiring for security, fintech, or anything with firmware in it? I answer fast.</p>
+        <div class="comms-links">
+          <a class="clink" href="mailto:raghavnjhaa@gmail.com">
+            <span class="clink-k">SUBSPACE</span><b>raghavnjhaa@gmail.com</b>
+          </a>
+          <a class="clink" href="https://github.com/" target="_blank" rel="noopener">
+            <span class="clink-k">CODE ARCHIVE</span><b>GitHub</b>
+          </a>
+          <a class="clink" href="https://www.linkedin.com/" target="_blank" rel="noopener">
+            <span class="clink-k">HOLONET</span><b>LinkedIn</b>
+          </a>
+          <a class="clink" href="#top" data-nav>
+            <span class="clink-k">RETURN</span><b>Top of transmission</b>
+          </a>
+        </div>
+        <p class="fineprint">Swap the GitHub and LinkedIn URLs in <code>index.html</code> for your real profiles.</p>
+      </div>
+    </div>
+
+    <div class="panel term-panel reveal">
+      <header class="panel-bar"><span>IMPERIAL TERMINAL</span><span class="blink">● READY</span></header>
+      <div class="term" id="term" tabindex="0" role="log" aria-label="Interactive terminal">
+        <div id="termOut"></div>
+        <div class="term-line"><span class="term-ps">jha@datanet:~$</span><span id="termIn"></span><b class="caret">_</b></div>
+      </div>
+      <div class="term-hint">click, then type <code>help</code></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div>© <span id="yr"></span> RAGHAV JHA — TRANSMISSION ENDS</div>
+  <div class="foot-r">BUILT WITH WEBGL, SPITE, AND NO FRAMEWORKS</div>
+</footer>
+
+<!-- lightsaber cursor -->
+<div id="saber" aria-hidden="true"><i></i></div>
+<canvas id="fx" aria-hidden="true"></canvas>
+
+<script src="main.js"></script>
+</body>
+</html>
