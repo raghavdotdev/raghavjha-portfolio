@@ -5,7 +5,7 @@
 :root{
   --void:        #04060b;
   --void-2:      #070a12;
-  --panel:       rgba(14,20,33,.55);
+  --panel:       rgba(11,16,28,.72);
   --panel-solid: #0b1120;
   --line:        rgba(140,170,220,.14);
   --line-2:      rgba(140,170,220,.26);
@@ -58,17 +58,20 @@ a{ color:inherit; }
   z-index:0;
   pointer-events:none;
   background:
-    radial-gradient(64vw 50vw at 10% 30%, rgba(70,125,255,.10), transparent 64%),
-    radial-gradient(52vw 44vw at 46% 86%, rgba(132,86,255,.085), transparent 64%),
-    radial-gradient(40vw 34vw at 88% 62%, rgba(255,110,60,.05), transparent 66%);
-  filter:blur(6px);
+    radial-gradient(70vw 56vw at 84% 40%, rgba(255,64,48,.16), transparent 66%),
+    radial-gradient(56vw 46vw at 58% 88%, rgba(220,52,60,.11), transparent 66%),
+    radial-gradient(62vw 50vw at 8% 26%,  rgba(78,110,220,.07), transparent 66%),
+    radial-gradient(44vw 38vw at 30% 62%, rgba(255,96,70,.055), transparent 68%);
+  filter:blur(8px);
 }
 
 .vignette{
   position:fixed; inset:0;
   z-index:0;
   pointer-events:none;
-  background:radial-gradient(120vw 100vh at 50% 30%, transparent 40%, rgba(2,4,8,.72) 100%);
+  background:
+    radial-gradient(120vw 100vh at 50% 30%, transparent 34%, rgba(2,3,7,.80) 100%),
+    linear-gradient(100deg, rgba(3,5,10,.50) 0%, rgba(3,5,10,.18) 44%, transparent 70%);
 }
 
 /* everything above the sky */
