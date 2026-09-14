@@ -48,7 +48,8 @@
     <p class="lede stagger">
       Founding engineer at <a href="#work">Aptosi</a>, a seed-stage fintech working on invoice fraud
       detection. I work across application security, real-time firmware, and the product on top of
-      both — currently finishing a Software Engineering degree at Seneca Polytechnic.
+      both — three internships and a thousand-user ticketing platform behind me, and a Software
+      Engineering degree at Seneca still ahead.
     </p>
     <div class="hero-actions stagger">
       <a class="btn" href="#work">See the work</a>
@@ -57,7 +58,7 @@
     <dl class="facts stagger">
       <div><dt>Focus</dt><dd>Application security</dd></div>
       <div><dt>Currently</dt><dd>Aptosi · Seneca</dd></div>
-      <div><dt>Graduating</dt><dd>2027</dd></div>
+      <div><dt>Graduating</dt><dd>April 2027</dd></div>
       <div><dt>Status</dt><dd class="open">Open to roles</dd></div>
     </dl>
   </section>
@@ -89,8 +90,22 @@
           <h3>Merge-time SAST gate</h3>
           <p>Wired static analysis into GitHub Actions across all four Aptosi repositories, with critical
           findings blocking the pull request rather than landing in a dashboard nobody reads. Security
-          moved from a quarterly audit to a condition of merging.</p>
+          moved from a quarterly audit to a condition of merging, and the critical and high-severity
+          backlog got resolved to clear a compliance bar rather than deferred.</p>
           <ul class="tags"><li>GitHub Actions</li><li>SAST</li><li>CI/CD</li></ul>
+        </div>
+        <span class="work-org">Aptosi</span>
+      </li>
+
+      <li class="work-row reveal">
+        <span class="work-year">2025—</span>
+        <div class="work-body">
+          <h3>Invoice classification engine</h3>
+          <p>Took Aptosi's core classification engine off a hand-written rule set and onto an AI-driven
+          architecture, improving detection accuracy and letting it scale past the point where somebody
+          has to write a new rule for every fraud pattern. The product around it spans a Chrome
+          extension, a React/Next.js dashboard, and the backend API underneath.</p>
+          <ul class="tags"><li>Applied AI</li><li>Next.js</li><li>Backend API</li></ul>
         </div>
         <span class="work-org">Aptosi</span>
       </li>
@@ -116,6 +131,43 @@
           behind it, a provider-agnostic AI layer, Docker throughout. Defensive only, with RBAC, audit
           logging and tenant-isolation tests treated as requirements rather than follow-ups.</p>
           <ul class="tags"><li>Next.js</li><li>FastAPI</li><li>Multi-tenant</li><li>RBAC</li></ul>
+        </div>
+        <span class="work-org">Personal</span>
+      </li>
+
+      <li class="work-row reveal">
+        <span class="work-year">2025</span>
+        <div class="work-body">
+          <h3>Matangi Event</h3>
+          <p>A full-stack ticketing platform that scaled to over a thousand users, handling live
+          payment transactions end to end. Shipped to real buyers, which meant debugging payment
+          flows in production and tuning the checkout UX against actual traffic rather than a
+          staging fixture.</p>
+          <ul class="tags"><li>Payments</li><li>Full-stack</li><li>matangievent.com</li></ul>
+        </div>
+        <span class="work-org">Freelance</span>
+      </li>
+
+      <li class="work-row reveal">
+        <span class="work-year">2024</span>
+        <div class="work-body">
+          <h3>Interactive livestream platform</h3>
+          <p>Real-time RTSP livestreaming with draggable, resizable broadcast overlays — React and
+          Flask, React-RND for the overlay layer, MongoDB behind a CRUD API. Live video and a
+          mutable UI on top of it, staying in sync.</p>
+          <ul class="tags"><li>RTSP</li><li>React</li><li>Flask</li><li>MongoDB</li></ul>
+        </div>
+        <span class="work-org">Personal</span>
+      </li>
+
+      <li class="work-row reveal">
+        <span class="work-year">2024</span>
+        <div class="work-body">
+          <h3>CloakScan</h3>
+          <p>A privacy Chrome extension that detects and blocks third-party trackers, measured at a
+          95% data-leak prevention rate. Reading what a page tries to exfiltrate before it gets the
+          chance — the same instinct as the security work, pointed at the browser.</p>
+          <ul class="tags"><li>Chrome extension</li><li>Privacy</li><li>Tracker blocking</li></ul>
         </div>
         <span class="work-org">Personal</span>
       </li>
@@ -160,12 +212,20 @@
       and firmware nobody ships are the same thing.</p>
 
       <p>At Aptosi I'm a founding engineer on a small team, which in practice means I own problems rather
-      than tickets: the compliance assessment, the CI security gate, the accounting integrations, and
-      whatever else is between us and shipping. Before that, and still, I write firmware for NXP Kinetis
-      boards and train vision models at Seneca.</p>
+      than tickets: the compliance assessment, the CI security gate, the accounting integrations, the
+      classification engine, and whatever else is between us and shipping. Before that I was a web
+      developer intern at Alpha Business Consulting in Calgary and a full-stack intern at Coding Cloud
+      in Ahmedabad, and alongside all of it I write firmware for NXP Kinetis boards and train vision
+      models at Seneca.</p>
 
-      <p>I grew up in Himmatnagar, Gujarat, and moved to Toronto in 2023. I'm graduating in 2027 and
-      looking for teams working on security, fintech infrastructure, or anything with firmware in it.</p>
+      <p>The things I've shipped outside work tend to be the ones that taught me most. A ticketing
+      platform that took real money from a thousand-odd real people. A livestream tool with a UI you can
+      drag around while the video keeps playing. A Chrome extension that blocks 95% of the trackers
+      trying to read the page you're on.</p>
+
+      <p>I grew up in Himmatnagar, Gujarat, and moved to Toronto in 2023. I'm graduating in April 2027
+      and looking for teams working on security, fintech infrastructure, or anything with firmware in
+      it.</p>
     </div>
   </section>
 
@@ -193,17 +253,37 @@
           <li>DMA, ring buffers, I²S/SAI</li>
           <li>I²C, SPI, UART</li>
           <li>ToF and IMU sensor integration</li>
-          <li>C, bare-metal debugging</li>
+          <li>C, C++, bare-metal debugging</li>
         </ul>
       </div>
       <div class="stack-col reveal">
-        <h3>Product</h3>
+        <h3>Frontend</h3>
         <ul>
-          <li>TypeScript, SvelteKit, Next.js</li>
-          <li>Python, FastAPI</li>
-          <li>PostgreSQL, Redis, Firestore</li>
-          <li>Docker, GitHub Actions</li>
-          <li>Google Cloud</li>
+          <li>TypeScript, JavaScript</li>
+          <li>React, Next.js, SvelteKit</li>
+          <li>Tailwind, Bootstrap</li>
+          <li>WebSockets, Socket.io</li>
+          <li>Chrome extensions</li>
+        </ul>
+      </div>
+      <div class="stack-col reveal">
+        <h3>Backend</h3>
+        <ul>
+          <li>Node.js, Express</li>
+          <li>Python, FastAPI, Flask</li>
+          <li>Java, Spring Boot</li>
+          <li>PHP, Laravel</li>
+          <li>REST, GraphQL</li>
+        </ul>
+      </div>
+      <div class="stack-col reveal">
+        <h3>Data &amp; infra</h3>
+        <ul>
+          <li>PostgreSQL, MySQL, SQL Server</li>
+          <li>MongoDB, Redis, Firebase</li>
+          <li>Docker, Kubernetes</li>
+          <li>AWS, Google Cloud</li>
+          <li>CI/CD, Git</li>
         </ul>
       </div>
       <div class="stack-col reveal">
@@ -232,10 +312,29 @@
         integrations, and full-stack product work.</p></div>
       </li>
       <li class="exp-row reveal">
+        <span class="exp-year">2024 — now</span>
+        <div><h3>Executive <span>· Seneca Software Developers Club</span></h3>
+        <p>Built and maintain the club site that runs event registration and communications, and
+        organize the technical workshops that go on it.</p></div>
+      </li>
+      <li class="exp-row reveal">
+        <span class="exp-year">2025</span>
+        <div><h3>Web Developer Intern <span>· Alpha Business Consulting</span></h3>
+        <p>Calgary. Designed and deployed a PDF-to-Excel bank statement processor that cut manual
+        data entry by 70% and improved accuracy, plus internal tooling in React, Node.js and
+        SQL/NoSQL.</p></div>
+      </li>
+      <li class="exp-row reveal">
+        <span class="exp-year">2024 — 2025</span>
+        <div><h3>Full Stack Developer Intern <span>· Coding Cloud</span></h3>
+        <p>Ahmedabad. Feature development and code review across five client accounts, owning the
+        end-to-end communication that kept scopes clear and deliveries on time.</p></div>
+      </li>
+      <li class="exp-row reveal">
         <span class="exp-year">2023 — 2027</span>
         <div><h3>B.Eng Software Engineering <span>· Seneca Polytechnic</span></h3>
-        <p>Newnham Campus, Toronto. Embedded systems, machine learning, and capstone work alongside
-        full-time engineering.</p></div>
+        <p>Newnham Campus, Toronto. Software engineering, operating systems, algorithms, artificial
+        intelligence and system design, alongside full-time engineering work.</p></div>
       </li>
       <li class="exp-row reveal">
         <span class="exp-year">2023</span>
