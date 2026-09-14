@@ -1,147 +1,164 @@
-/* raghavjha.com — no dependencies */
-(() => {
-'use strict';
+/* raghavjha.com — starfield, parallax, reveals */
+(function () {
+  'use strict';
 
-const $  = (s, r = document) => r.querySelector(s);
-const $$ = (s, r = document) => [...r.querySelectorAll(s)];
-const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/* ---------- entrance ---------- */
-requestAnimationFrame(() => document.body.classList.add('ready'));
+  /* ---------- year ---------- */
+  var yr = document.getElementById('yr');
+  if (yr) yr.textContent = new Date().getFullYear();
 
-/* ---------- starfield ----------
-   Drawn once to a canvas and then only translated on scroll, so it costs
-   nothing per frame. Three depth bands give it parallax without a loop. */
-const Stars = (() => {
-  const cvs = document.getElementById('stars');
-  if (!cvs) return { parallax(){} };
-  const ctx = cvs.getContext('2d');
-  let h = 0, dpr = 1;
+  /* ---------- starfield ---------- */
+  var canvas = document.getElementById('stars');
+  if (canvas && canvas.getContext) {
+    var ctx = canvas.getContext('2d');
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var W = 0, H = 0;
+    var stars = [];
+    var scrollY = window.scrollY || 0;
 
-  const BANDS = [
-    { count: 0.00016, r: [0.4, 0.9], a: [0.18, 0.42], speed: 0.04 },
-    { count: 0.00010, r: [0.7, 1.3], a: [0.30, 0.62], speed: 0.09 },
-    { count: 0.00004, r: [1.0, 1.9], a: [0.50, 0.92], speed: 0.16 }
-  ];
-  let bands = [];
+    // three depth layers: far/dim/slow → near/bright/fast
+    var LAYERS = [
+      { count: 0.00022, r: [0.35, 0.85], a: [0.18, 0.45], drift: 0.010, par: 0.06 },
+      { count: 0.00014, r: [0.55, 1.15], a: [0.32, 0.66], drift: 0.022, par: 0.16 },
+      { count: 0.000045, r: [0.90, 1.65], a: [0.55, 1.00], drift: 0.042, par: 0.34 }
+    ];
 
-  const rnd = (a, b) => a + Math.random() * (b - a);
+    var TINTS = ['255,255,255', '255,255,255', '210,228,255', '255,222,178', '186,206,255'];
 
-  function build(){
-    dpr = Math.min(devicePixelRatio || 1, 2);
-    const w = innerWidth;
-    h = Math.round(innerHeight * 1.35);
-    cvs.width  = Math.round(w * dpr);
-    cvs.height = Math.round(h * dpr);
-    cvs.style.height = h + 'px';
+    function rand(a, b) { return a + Math.random() * (b - a); }
 
-    bands = BANDS.map(b => {
-      const n = Math.round(w * h * b.count);
-      const list = [];
-      for (let i = 0; i < n; i++){
-        list.push({
-          x: Math.random() * w,
-          y: Math.random() * h,
-          r: rnd(b.r[0], b.r[1]),
-          a: rnd(b.a[0], b.a[1]),
-          // a few stars get a faint warm or cool cast, like a real sky
-          c: Math.random() < 0.12 ? (Math.random() < 0.5 ? '190,205,255' : '255,238,214') : '255,255,255'
-        });
-      }
-      return { ...b, list };
-    });
+    function build() {
+      var rect = canvas.getBoundingClientRect();
+      W = rect.width; H = rect.height;
+      canvas.width = Math.round(W * dpr);
+      canvas.height = Math.round(H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    draw();
-  }
-
-  function draw(){
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, cvs.width, cvs.height);
-    for (const band of bands){
-      for (const s of band.list){
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, s.r, 0, 6.2832);
-        ctx.fillStyle = `rgba(${s.c},${s.a})`;
-        ctx.fill();
-        if (s.r > 1.4){                       // the brightest few get a soft halo
-          ctx.beginPath();
-          ctx.arc(s.x, s.y, s.r * 3.2, 0, 6.2832);
-          ctx.fillStyle = `rgba(${s.c},${s.a * 0.09})`;
-          ctx.fill();
+      stars = [];
+      var area = W * H;
+      for (var L = 0; L < LAYERS.length; L++) {
+        var cfg = LAYERS[L];
+        var n = Math.max(12, Math.round(area * cfg.count));
+        for (var i = 0; i < n; i++) {
+          stars.push({
+            x: Math.random() * W,
+            y: Math.random() * (H * 1.6),      // extra vertical room for parallax
+            r: rand(cfg.r[0], cfg.r[1]),
+            a: rand(cfg.a[0], cfg.a[1]),
+            drift: cfg.drift,
+            par: cfg.par,
+            tint: TINTS[(Math.random() * TINTS.length) | 0],
+            tw: Math.random() * Math.PI * 2,
+            twSpeed: rand(0.6, 1.9)
+          });
         }
       }
     }
+
+    var t0 = performance.now();
+
+    function frame(now) {
+      var t = (now - t0) / 1000;
+      ctx.clearRect(0, 0, W, H);
+
+      for (var i = 0; i < stars.length; i++) {
+        var s = stars[i];
+        var y = s.y - (scrollY * s.par) - (t * s.drift * 26);
+        // wrap within the extended field
+        var span = H * 1.6;
+        y = ((y % span) + span) % span;
+        if (y > H + 4) continue;
+
+        var twinkle = reduced ? 1 : 0.72 + 0.28 * Math.sin(s.tw + t * s.twSpeed);
+        ctx.globalAlpha = s.a * twinkle;
+        ctx.fillStyle = 'rgb(' + s.tint + ')';
+        ctx.beginPath();
+        ctx.arc(s.x, y, s.r, 0, Math.PI * 2);
+        ctx.fill();
+
+        // soft halo on the brightest near-layer stars
+        if (s.r > 1.35) {
+          var R = s.r * 5;
+          var g = ctx.createRadialGradient(s.x, y, 0, s.x, y, R);
+          g.addColorStop(0, 'rgba(' + s.tint + ',' + (0.22 * twinkle).toFixed(3) + ')');
+          g.addColorStop(1, 'rgba(' + s.tint + ',0)');
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(s.x, y, R, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.globalAlpha = 1;
+      requestAnimationFrame(frame);
+    }
+
+    build();
+
+    if (reduced) {
+      // single static render
+      requestAnimationFrame(function (n) {
+        var t = 0;
+        ctx.clearRect(0, 0, W, H);
+        for (var i = 0; i < stars.length; i++) {
+          var s = stars[i];
+          var y = s.y % H;
+          ctx.globalAlpha = s.a;
+          ctx.fillStyle = 'rgb(' + s.tint + ')';
+          ctx.beginPath(); ctx.arc(s.x, y, s.r, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      });
+    } else {
+      requestAnimationFrame(frame);
+    }
+
+    var rt;
+    window.addEventListener('resize', function () {
+      clearTimeout(rt);
+      rt = setTimeout(build, 180);
+    });
+
+    window.addEventListener('scroll', function () {
+      scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    }, { passive: true });
   }
 
-  let resizeTimer = 0;
-  addEventListener('resize', () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(build, 180);
-  }, { passive: true });
+  /* ---------- scroll progress + sticky nav ---------- */
+  var bar = document.getElementById('progressBar');
+  var nav = document.getElementById('nav');
 
-  build();
-
-  return {
-    parallax(y){
-      if (REDUCED) return;
-      // slowest band sets the drift; wraps so it never runs out of sky
-      const offset = -(y * 0.14) % (h * 0.34);
-      cvs.style.transform = 'translate3d(0,' + offset.toFixed(1) + 'px,0)';
-    }
-  };
-})();
-
-/* ---------- scroll: nav state, progress bar, active link ---------- */
-(() => {
-  const nav = $('#nav');
-  const bar = $('#progressBar');
-  const links = $$('.nav-links a');
-  const sections = links.map(a => $(a.getAttribute('href'))).filter(Boolean);
-  let ticking = false;
-
-  function update(){
-    const y = scrollY;
-    const max = document.documentElement.scrollHeight - innerHeight;
-    const p = max > 0 ? Math.min(1, Math.max(0, y / max)) : 0;
-
-    nav.classList.toggle('solid', y > 8);
-    bar.style.transform = 'scaleX(' + p.toFixed(4) + ')';
-    Stars.parallax(y);
-
-    let current = null;
-    for (const s of sections){
-      if (s.getBoundingClientRect().top <= innerHeight * 0.35) current = s.id;
-    }
-    for (const a of links) a.classList.toggle('active', a.getAttribute('href') === '#' + current);
-
-    ticking = false;
+  function onScroll() {
+    var y = window.scrollY || document.documentElement.scrollTop || 0;
+    var max = document.documentElement.scrollHeight - window.innerHeight;
+    if (bar) bar.style.width = (max > 0 ? (y / max) * 100 : 0) + '%';
+    if (nav) nav.classList.toggle('stuck', y > 12);
   }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
 
-  addEventListener('scroll', () => {
-    if (!ticking){ ticking = true; requestAnimationFrame(update); }
-  }, { passive: true });
-  addEventListener('resize', update, { passive: true });
-  update();
-})();
+  /* ---------- reveals ---------- */
+  var items = document.querySelectorAll('.reveal, .stagger');
 
-/* ---------- reveal on scroll ---------- */
-(() => {
-  const items = $$('.reveal');
-  if (REDUCED || !('IntersectionObserver' in window)){
-    items.forEach(el => el.classList.add('in'));
-    return;
+  if (!('IntersectionObserver' in window) || reduced) {
+    for (var i = 0; i < items.length; i++) items[i].classList.add('in');
+  } else {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) {
+          e.target.classList.add('in');
+          io.unobserve(e.target);
+        }
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+
+    for (var j = 0; j < items.length; j++) io.observe(items[j]);
+
+    // hero staggers in on load rather than on scroll
+    var hero = document.querySelectorAll('.hero .stagger');
+    hero.forEach(function (el, k) {
+      setTimeout(function () { el.classList.add('in'); }, 90 + k * 110);
+    });
   }
-  const io = new IntersectionObserver(entries => {
-    for (const e of entries){
-      if (!e.isIntersecting) continue;
-      e.target.classList.add('in');
-      io.unobserve(e.target);
-    }
-  }, { threshold: 0.1, rootMargin: '0px 0px -5% 0px' });
-  items.forEach(el => io.observe(el));
-})();
-
-/* ---------- year ---------- */
-$('#yr').textContent = new Date().getFullYear();
-
 })();
