@@ -18,16 +18,19 @@ function discover() {
   const pairs = [
     ['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN'],
     ['KV_REST_API_URL', 'KV_REST_API_TOKEN'],
-    ['REDIS_REST_URL', 'REDIS_REST_TOKEN'],
+    ['STORAGE_KV_REST_API_URL', 'STORAGE_KV_REST_API_TOKEN'],
+    ['STORAGE_UPSTASH_REDIS_REST_URL', 'STORAGE_UPSTASH_REDIS_REST_TOKEN'],
   ];
   for (const [u, t] of pairs) {
     if (env[u] && env[t]) return { url: env[u], token: env[t], via: u };
   }
 
-  // Otherwise: any *_REST_URL whose sibling *_REST_TOKEN also exists.
+  // Otherwise: any REST *_URL whose sibling *_TOKEN also exists. Requires
+  // REST in the name so the rediss:// connection strings are skipped - those
+  // speak the Redis wire protocol, not HTTP.
   for (const name of Object.keys(env)) {
-    if (!/REST_URL$/.test(name)) continue;
-    const tokenName = name.replace(/REST_URL$/, 'REST_TOKEN');
+    if (!/_URL$/.test(name) || !/REST/.test(name)) continue;
+    const tokenName = name.replace(/_URL$/, '_TOKEN');
     if (env[name] && env[tokenName]) return { url: env[name], token: env[tokenName], via: name };
   }
   return null;
