@@ -17,13 +17,16 @@ const json = (res, code, body) => {
 };
 
 module.exports = async (req, res) => {
-  if (req.method !== 'POST') return json(res, 405, { error: 'POST only' });
-
   const secret = process.env.ROOMS_INGEST_SECRET;
   if (!secret) return json(res, 500, { error: 'ROOMS_INGEST_SECRET not set' });
 
   const auth = req.headers.authorization || '';
   if (auth !== `Bearer ${secret}`) return json(res, 401, { error: 'unauthorized' });
+
+  // Authenticated diagnostic: which storage env vars can the function see?
+  if (req.method === 'GET') return json(res, 200, store.debugNames());
+
+  if (req.method !== 'POST') return json(res, 405, { error: 'GET or POST only' });
 
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = null; } }
