@@ -80,4 +80,22 @@ async function set(value) {
   if (!r.ok) throw new Error(`store write ${r.status} ${(await r.text()).slice(0, 120)}`);
 }
 
-module.exports = { get, set, configured, debugNames };
+/**
+ * Run any Redis command, e.g. command(['SET', 'k', 'v', 'EX', '60']).
+ * Upstash's REST API accepts the command as a JSON array POSTed to the base URL.
+ */
+async function command(args) {
+  const c = creds();
+  if (!c) throw new Error('store not configured');
+  const r = await fetch(c.url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${c.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(args.map(String)),
+    cache: 'no-store',
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || j.error) throw new Error(`store ${args[0]} failed: ${j.error || r.status}`);
+  return j.result;
+}
+
+module.exports = { get, set, command, configured, debugNames };

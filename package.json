@@ -1,0 +1,8 @@
+{
+  "name": "raghavjha-portfolio",
+  "private": true,
+  "description": "Static site + a few Vercel functions (study-room status, resume tailor).",
+  "dependencies": {
+    "pdf-lib": "1.17.1"
+  }
+}

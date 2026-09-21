@@ -6,16 +6,20 @@
     {
       "source": "/rooms-1a164303",
       "destination": "/api/rooms"
+    },
+    {
+      "source": "/tailor",
+      "destination": "/api/tailor"
+    },
+    {
+      "source": "/tailor/dl/:id/:file",
+      "destination": "/api/tailor-doc?id=:id&file=:file"
     }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'; manifest-src 'self'; upgrade-insecure-requests"
-        },
         {
           "key": "X-Content-Type-Options",
           "value": "nosniff"
@@ -51,6 +55,24 @@
       ]
     },
     {
+      "source": "/((?!tailor).*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'; manifest-src 'self'; upgrade-insecure-requests"
+        }
+      ]
+    },
+    {
+      "source": "/tailor(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; manifest-src 'self'; upgrade-insecure-requests"
+        }
+      ]
+    },
+    {
       "source": "/(.*).(css|js)",
       "headers": [
         {
@@ -68,5 +90,10 @@
         }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "api/tailor.js": {
+      "maxDuration": 300
+    }
+  }
 }
