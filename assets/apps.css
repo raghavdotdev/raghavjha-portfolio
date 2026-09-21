@@ -1,0 +1,37 @@
+/* Applications tracker - layered on top of tailor.css */
+:root{--ok:#1f6f43;--mid:#8a6d1f;--bad:#9a3a1f;--ghost:#6b6b66}
+@media(prefers-color-scheme:dark){:root{--ok:#6cc08b;--mid:#d5b65a;--bad:#e08163;--ghost:#95928c}}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 8px}
+.stats div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column}
+.stats b{font-size:1.3rem;font-variant-numeric:tabular-nums}
+.stats span{color:var(--muted);font-size:.78rem}
+@media(max-width:420px){.stats{grid-template-columns:repeat(2,1fr)}}
+.group{border-top:0;padding-top:0;margin-top:18px}
+.group>details>summary{list-style:none;cursor:pointer}
+.group>details>summary::-webkit-details-marker{display:none}
+.group h2{display:inline-flex;gap:8px;align-items:center;font-size:1rem;margin:0 0 10px}
+.group h2 .n{color:var(--muted);font-weight:500}
+.apps{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.app{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:10px;padding:12px 14px}
+.app.offer,.app.interview{border-left-color:var(--ok)}
+.app.assessment,.app.applied{border-left-color:var(--mid)}
+.app.rejected{border-left-color:var(--bad)}
+.app.ghosted{border-left-color:var(--ghost);opacity:.85}
+.app .head{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.app .company{font-weight:650}
+.app .role{color:var(--muted);font-size:.9rem}
+.app .meta{color:var(--muted);font-size:.8rem;margin-top:2px}
+.clock{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:.78rem;color:var(--muted)}
+.clock progress{flex:1;height:6px;accent-color:var(--mid)}
+.app details{margin-top:8px}
+.app details summary{font-size:.8rem;font-weight:500;color:var(--accent)}
+.events{margin:8px 0;padding-left:18px;font-size:.8rem;display:grid;gap:4px}
+.t{font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;padding:1px 6px;border-radius:999px;border:1px solid currentColor}
+.t.applied,.t.assessment{color:var(--mid)}
+.t.interview,.t.offer{color:var(--ok)}
+.t.rejected{color:var(--bad)}
+.fix{display:flex;gap:8px;align-items:center;margin-top:6px}
+.fix select{font:inherit;font-size:.85rem;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg);flex:1;min-width:0}
+button.small{margin:0;padding:6px 12px;font-size:.85rem}
+button.link{background:none;color:var(--muted);padding:0;font-weight:400;text-decoration:underline;margin-top:28px}
+code{font-size:.85em}

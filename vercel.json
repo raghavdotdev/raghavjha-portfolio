@@ -14,6 +14,10 @@
     {
       "source": "/tailor/dl/:id/:file",
       "destination": "/api/tailor-doc?id=:id&file=:file"
+    },
+    {
+      "source": "/applications",
+      "destination": "/api/applications"
     }
   ],
   "headers": [
@@ -55,7 +59,7 @@
       ]
     },
     {
-      "source": "/((?!tailor).*)",
+      "source": "/((?!tailor|applications).*)",
       "headers": [
         {
           "key": "Content-Security-Policy",
@@ -64,7 +68,7 @@
       ]
     },
     {
-      "source": "/tailor(.*)",
+      "source": "/(tailor|applications)(.*)",
       "headers": [
         {
           "key": "Content-Security-Policy",
