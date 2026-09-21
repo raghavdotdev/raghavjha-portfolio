@@ -115,9 +115,20 @@ function parseJson(text) {
   throw new GeminiError('Gemini returned something that wasn\'t valid JSON. Try again.');
 }
 
-async function call(model, key, body) {
+// Free-tier Flash models, newest first. When one is overloaded (503) or out
+// of free quota (429), the next usually isn't - each has its own capacity.
+const FALLBACK_MODELS = ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash'];
+
+// Vercel Hobby functions get 300s. Leave room to fetch the job and render PDFs.
+const TOTAL_BUDGET_MS = 230000;
+const PER_CALL_MS = 100000;
+
+const RETRYABLE = new Set([500, 502, 503, 504]);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function call(model, key, body, timeoutMs) {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 150000);
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const r = await fetch(`${ENDPOINT}/${encodeURIComponent(model)}:generateContent`, {
       method: 'POST',
@@ -129,12 +140,14 @@ async function call(model, key, body) {
     let data; try { data = JSON.parse(text); } catch { data = {}; }
     return { status: r.status, data, text };
   } catch (e) {
-    if (e.name === 'AbortError') throw new GeminiError('Gemini took too long to respond. Try again.');
-    throw new GeminiError(`Couldn't reach Gemini (${e.message}).`);
+    // Treat timeouts and network blips like a 503: worth trying the next model.
+    return { status: e.name === 'AbortError' ? 504 : 502, data: {}, text: e.message };
   } finally {
     clearTimeout(timer);
   }
 }
+
+const errMsg = (res) => (res.data.error && res.data.error.message) || String(res.text || '').slice(0, 200);
 
 async function tailor(master, job, { key, model }) {
   if (!key) throw new GeminiError('GEMINI_API_KEY is not set in Vercel.');
@@ -147,42 +160,68 @@ async function tailor(master, job, { key, model }) {
     job.text,
   ].join('\n');
 
-  const body = {
-    systemInstruction: { parts: [{ text: SYSTEM }] },
+  const makeBody = (withSchema) => ({
+    systemInstruction: { parts: [{ text: withSchema ? SYSTEM
+      : `${SYSTEM}\n\nRespond with ONLY a JSON object matching this JSON Schema:\n${JSON.stringify(SCHEMA)}` }] },
     contents: [{ role: 'user', parts: [{ text: user }] }],
     generationConfig: {
       temperature: 0.4,
       maxOutputTokens: 8192,
       responseMimeType: 'application/json',
-      responseSchema: SCHEMA,
+      ...(withSchema ? { responseSchema: SCHEMA } : {}),
     },
-  };
+  });
 
-  let res = await call(model, key, body);
+  // Configured model first, then the others.
+  const models = [model, ...FALLBACK_MODELS].filter((m, i, a) => m && a.indexOf(m) === i);
+  const started = Date.now();
+  const tried = [];
+  let lastRes = null;
 
-  // If this model/version rejects the schema field, retry with plain JSON mode.
-  if (res.status === 400 && /schema/i.test(res.text)) {
-    delete body.generationConfig.responseSchema;
-    body.systemInstruction.parts[0].text += `\n\nRespond with ONLY a JSON object matching this JSON Schema:\n${JSON.stringify(SCHEMA)}`;
-    res = await call(model, key, body);
+  for (const m of models) {
+    let withSchema = true;
+    // Up to 2 tries per model for transient overloads, with a short backoff.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const left = TOTAL_BUDGET_MS - (Date.now() - started);
+      if (left < 15000) break;
+
+      let res = await call(m, key, makeBody(withSchema), Math.min(PER_CALL_MS, left));
+      if (res.status === 400 && withSchema && /schema/i.test(res.text)) {
+        withSchema = false;
+        res = await call(m, key, makeBody(false), Math.min(PER_CALL_MS, TOTAL_BUDGET_MS - (Date.now() - started)));
+      }
+      lastRes = res;
+
+      if (res.status === 401 || res.status === 403) {
+        throw new GeminiError('Gemini rejected the API key. Check GEMINI_API_KEY in Vercel.');
+      }
+      if (res.status === 404 || res.status === 429) break;             // unknown model / out of quota: next model
+      if (RETRYABLE.has(res.status)) {                                    // overloaded: back off, maybe retry
+        if (attempt === 0) await sleep(2500);
+        continue;
+      }
+      if (res.status >= 400) throw new GeminiError(`Gemini error ${res.status}: ${errMsg(res)}`);
+
+      const cand = (res.data.candidates || [])[0];
+      if (!cand) {
+        const reason = res.data.promptFeedback && res.data.promptFeedback.blockReason;
+        throw new GeminiError(reason ? `Gemini declined this posting (${reason}).` : 'Gemini returned no result. Try again.');
+      }
+      const text = ((cand.content && cand.content.parts) || []).map((p) => p.text || '').join('');
+      if (!text) { lastRes = { status: 0, data: {}, text: cand.finishReason || 'empty' }; break; }
+
+      const parsed = parseJson(text);
+      Object.defineProperty(parsed, 'model', { value: m, enumerable: false });
+      return parsed;
+    }
+    tried.push(`${m} (${lastRes ? lastRes.status || lastRes.text : '?'})`);
+    if (TOTAL_BUDGET_MS - (Date.now() - started) < 15000) break;
   }
 
-  if (res.status === 401 || res.status === 403) throw new GeminiError('Gemini rejected the API key. Check GEMINI_API_KEY in Vercel.');
-  if (res.status === 404) throw new GeminiError(`Gemini doesn't recognise the model "${model}". Set GEMINI_MODEL in Vercel.`);
-  if (res.status === 429) throw new GeminiError('Hit the Gemini free-tier rate limit. Wait a minute and try again.');
-  if (res.status >= 400) {
-    const msg = (res.data.error && res.data.error.message) || res.text.slice(0, 200);
-    throw new GeminiError(`Gemini error ${res.status}: ${msg}`);
+  if (lastRes && lastRes.status === 429) {
+    throw new GeminiError('Every free Gemini model is at its rate limit right now. Wait a minute and try again.');
   }
-
-  const cand = (res.data.candidates || [])[0];
-  if (!cand) {
-    const reason = res.data.promptFeedback && res.data.promptFeedback.blockReason;
-    throw new GeminiError(reason ? `Gemini declined this posting (${reason}).` : 'Gemini returned no result. Try again.');
-  }
-  const text = ((cand.content && cand.content.parts) || []).map((p) => p.text || '').join('');
-  if (!text) throw new GeminiError(`Gemini stopped early (${cand.finishReason || 'no text'}). Try again.`);
-  return parseJson(text);
+  throw new GeminiError(`Gemini is overloaded right now - tried ${tried.join(', ')}. Try again in a few minutes.`);
 }
 
-module.exports = { tailor, modelView, GeminiError, SCHEMA };
+module.exports = { tailor, modelView, GeminiError, SCHEMA, FALLBACK_MODELS };

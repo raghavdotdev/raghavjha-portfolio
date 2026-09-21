@@ -77,7 +77,7 @@ function diffList(original, tailored) {
   return rows;
 }
 
-function resultPage({ id, role, company, notes, warnings, changes, fits }) {
+function resultPage({ id, role, company, notes, warnings, changes, fits, model }) {
   const w = [...warnings];
   if (!fits) w.unshift('The resume ran slightly past one page even at the smallest size. Open it and check the bottom.');
   return page(`Tailored - ${company || 'job'}`, `  <h1>Ready</h1>
@@ -86,7 +86,7 @@ function resultPage({ id, role, company, notes, warnings, changes, fits }) {
     <a class="btn" href="/tailor/dl/${id}/resume">Resume PDF</a>
     <a class="btn secondary" href="/tailor/dl/${id}/cover">Cover letter PDF</a>
   </div>
-  <p class="fine">Links expire in 24 hours.</p>
+  <p class="fine">Links expire in 24 hours.${model ? ` Written by ${esc(model)}.` : ''}</p>
 ${notes ? `  <section>\n    <h2>What it emphasized</h2>\n    <p>${esc(notes)}</p>\n  </section>\n` : ''}${w.length ? `  <section class="warn">\n    <h2>Check before sending</h2>\n    <ul>\n${w.map((x) => `      <li>${esc(x)}</li>`).join('\n')}\n    </ul>\n  </section>\n` : ''}  <section>
     <details>
       <summary>${changes.length ? `${changes.length} bullet${changes.length === 1 ? '' : 's'} reworded` : 'No bullets reworded - only reordered'}</summary>
@@ -202,6 +202,7 @@ module.exports = async (req, res) => {
       warnings,
       changes: diffList(master, resume),
       fits: rPdf.fits,
+      model: out.model,
     }));
   } catch (e) {
     const known = e instanceof JobError || e instanceof GeminiError;
