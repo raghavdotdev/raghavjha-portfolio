@@ -115,13 +115,20 @@ function parseJson(text) {
   throw new GeminiError('Gemini returned something that wasn\'t valid JSON. Try again.');
 }
 
-// Free-tier Flash models, newest first. When one is overloaded (503) or out
-// of free quota (429), the next usually isn't - each has its own capacity.
-const FALLBACK_MODELS = ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash'];
+// Free-tier models, newest first. Flash-Lite runs on separate, far less
+// contended capacity, so it's the fallback that usually answers when every
+// Flash model is shedding free-tier load at once.
+const FALLBACK_MODELS = [
+  'gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash',
+  'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite',
+];
 
 // Vercel Hobby functions get 300s. Leave room to fetch the job and render PDFs.
 const TOTAL_BUDGET_MS = 230000;
 const PER_CALL_MS = 100000;
+// Pause between full passes over the model list. Overload spikes usually clear in seconds.
+const BACKOFF = Number(process.env.GEMINI_BACKOFF_SCALE || 1);
+const ROUND_WAITS_MS = [8000, 20000, 30000].map((ms) => ms * BACKOFF);
 
 const RETRYABLE = new Set([500, 502, 503, 504]);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -175,31 +182,31 @@ async function tailor(master, job, { key, model }) {
   // Configured model first, then the others.
   const models = [model, ...FALLBACK_MODELS].filter((m, i, a) => m && a.indexOf(m) === i);
   const started = Date.now();
-  const tried = [];
-  let lastRes = null;
+  const left = () => TOTAL_BUDGET_MS - (Date.now() - started);
+  const noSchema = new Set();   // models that rejected responseSchema
+  const dead = new Set();       // unknown model (404) or out of free quota (429) - skip from now on
+  const lastStatus = new Map();
+  let attempts = 0;
 
-  for (const m of models) {
-    let withSchema = true;
-    // Up to 2 tries per model for transient overloads, with a short backoff.
-    for (let attempt = 0; attempt < 2; attempt++) {
-      const left = TOTAL_BUDGET_MS - (Date.now() - started);
-      if (left < 15000) break;
+  // Several passes over every model, with a growing pause between passes.
+  for (let round = 0; round <= ROUND_WAITS_MS.length; round++) {
+    for (const m of models) {
+      if (dead.has(m)) continue;
+      if (left() < 15000) break;
 
-      let res = await call(m, key, makeBody(withSchema), Math.min(PER_CALL_MS, left));
-      if (res.status === 400 && withSchema && /schema/i.test(res.text)) {
-        withSchema = false;
-        res = await call(m, key, makeBody(false), Math.min(PER_CALL_MS, TOTAL_BUDGET_MS - (Date.now() - started)));
+      attempts++;
+      let res = await call(m, key, makeBody(!noSchema.has(m)), Math.min(PER_CALL_MS, left()));
+      if (res.status === 400 && !noSchema.has(m) && /schema/i.test(res.text)) {
+        noSchema.add(m);
+        res = await call(m, key, makeBody(false), Math.min(PER_CALL_MS, left()));
       }
-      lastRes = res;
+      lastStatus.set(m, res.status);
 
       if (res.status === 401 || res.status === 403) {
         throw new GeminiError('Gemini rejected the API key. Check GEMINI_API_KEY in Vercel.');
       }
-      if (res.status === 404 || res.status === 429) break;             // unknown model / out of quota: next model
-      if (RETRYABLE.has(res.status)) {                                    // overloaded: back off, maybe retry
-        if (attempt === 0) await sleep(2500);
-        continue;
-      }
+      if (res.status === 404 || res.status === 429) { dead.add(m); continue; }
+      if (RETRYABLE.has(res.status)) continue;        // busy: try the next model straight away
       if (res.status >= 400) throw new GeminiError(`Gemini error ${res.status}: ${errMsg(res)}`);
 
       const cand = (res.data.candidates || [])[0];
@@ -208,20 +215,27 @@ async function tailor(master, job, { key, model }) {
         throw new GeminiError(reason ? `Gemini declined this posting (${reason}).` : 'Gemini returned no result. Try again.');
       }
       const text = ((cand.content && cand.content.parts) || []).map((p) => p.text || '').join('');
-      if (!text) { lastRes = { status: 0, data: {}, text: cand.finishReason || 'empty' }; break; }
+      if (!text) { lastStatus.set(m, `empty (${cand.finishReason || '?'})`); continue; }
 
       const parsed = parseJson(text);
       Object.defineProperty(parsed, 'model', { value: m, enumerable: false });
       return parsed;
     }
-    tried.push(`${m} (${lastRes ? lastRes.status || lastRes.text : '?'})`);
-    if (TOTAL_BUDGET_MS - (Date.now() - started) < 15000) break;
+    if (models.every((m) => dead.has(m))) break;
+    const wait = ROUND_WAITS_MS[round];
+    if (wait === undefined || left() < wait + 20000) break;
+    await sleep(wait);
   }
 
-  if (lastRes && lastRes.status === 429) {
+  const secs = Math.round((Date.now() - started) / 1000);
+  const statuses = [...lastStatus.values()];
+  if (statuses.length && statuses.every((s) => s === 429)) {
     throw new GeminiError('Every free Gemini model is at its rate limit right now. Wait a minute and try again.');
   }
-  throw new GeminiError(`Gemini is overloaded right now - tried ${tried.join(', ')}. Try again in a few minutes.`);
+  if (statuses.some((s) => RETRYABLE.has(s))) {
+    throw new GeminiError(`Google's free tier is overloaded on every model right now - ${attempts} attempts across ${models.length - dead.size} models over ${secs}s. Try again in a few minutes, or turn on billing for the key to get priority.`);
+  }
+  throw new GeminiError(`Gemini unavailable - ${[...lastStatus].map(([m, s]) => `${m} (${s})`).join(', ')}.`);
 }
 
 module.exports = { tailor, modelView, GeminiError, SCHEMA, FALLBACK_MODELS };
