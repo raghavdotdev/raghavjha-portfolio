@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Compiler Deck — Raghav Jha</title>
+<meta name="description" content="A three-sector arcade built from SEP700 Compiler Design: compilation phases, lexical analysis, and predictive parsing.">
+<meta name="theme-color" content="#04060b">
+<link rel="stylesheet" href="/assets/compiler-deck.css">
+</head>
+<body>
+<canvas id="stars" aria-hidden="true"></canvas>
+<div id="app">
+  <div class="bar" role="status" aria-live="polite">
+    <div class="brand">Compiler Deck<small>SEP700 · sectors 1–3</small></div>
+    <div class="stat">Sector<b id="s-sector">—</b></div>
+    <div class="stat">Score<b id="s-score">0</b></div>
+    <div class="stat">Streak<b id="s-streak">×1</b></div>
+    <div class="stat">Hull<span class="hull" id="s-hull"><i></i><i></i><i></i></span></div>
+  </div>
+
+  <!-- TITLE -->
+  <section class="screen on" id="scr-title">
+    <div class="stage">
+      <div class="eyebrow">Translation system · online</div>
+      <h1>Source in.<br><span>Target out.</span></h1>
+      <p class="lead">Every mechanism from the first three weeks of compiler design, turned into a run: order the pipeline, tokenize by hand, drive a DFA through the powerset construction, build a leftmost derivation, and compute FIRST and FOLLOW sets before the parser stalls.</p>
+      <p class="lead">Three hull segments. A wrong answer costs one and shows you why. Lose all three and the sector restarts.</p>
+      <div class="sectors" id="sector-index"></div>
+      <div class="actions">
+        <button class="btn" id="btn-start">Begin run</button>
+        <button class="btn ghost" id="btn-free">Pick a sector</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTOR INTRO -->
+  <section class="screen" id="scr-intro">
+    <div class="stage">
+      <div class="eyebrow" id="intro-eyebrow"></div>
+      <h2 id="intro-title"></h2>
+      <p class="lead" id="intro-blurb"></p>
+      <ul class="log" id="intro-log"></ul>
+      <div class="actions"><button class="btn" id="btn-enter">Enter sector</button><button class="btn ghost" id="btn-back-title">Back</button></div>
+    </div>
+  </section>
+
+  <!-- PLAY -->
+  <section class="screen" id="scr-play">
+    <div class="stage">
+      <div class="progress"><i id="prog"></i></div>
+      <div class="card" id="card"></div>
+    </div>
+  </section>
+
+  <!-- SECTOR DONE -->
+  <section class="screen" id="scr-done">
+    <div class="stage">
+      <div class="eyebrow" id="done-eyebrow">Sector cleared</div>
+      <h2 id="done-title"></h2>
+      <div class="tally">
+        <div><div class="l">Sector score</div><div class="v" id="done-score">0</div></div>
+        <div><div class="l">Accuracy</div><div class="v" id="done-acc">0%</div></div>
+        <div><div class="l">Hull left</div><div class="v" id="done-hull">3</div></div>
+      </div>
+      <ul class="log" id="done-log"></ul>
+      <div class="actions"><button class="btn" id="btn-next">Next sector</button><button class="btn ghost" id="btn-done-title">Title</button></div>
+    </div>
+  </section>
+
+  <!-- FINAL -->
+  <section class="screen" id="scr-final">
+    <div class="stage">
+      <div class="eyebrow">Compilation complete</div>
+      <div class="rank" id="final-rank"></div>
+      <p class="lead" id="final-blurb"></p>
+      <div class="tally">
+        <div><div class="l">Total score</div><div class="v" id="final-score">0</div></div>
+        <div><div class="l">Accuracy</div><div class="v" id="final-acc">0%</div></div>
+        <div><div class="l">Best run</div><div class="v" id="final-best">0</div></div>
+      </div>
+      <div class="actions"><button class="btn" id="btn-again">Run again</button></div>
+    </div>
+  </section>
+
+  <div class="foot">Built from SEP700 lecture material (Seneca Polytechnic) · <a href="https://raghavjha.com">raghavjha.com</a></div>
+</div>
+
+<script src="/assets/compiler-deck.js" defer></script>
+</body>
+</html>

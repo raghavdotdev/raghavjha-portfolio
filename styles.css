@@ -278,6 +278,8 @@ h2{
   transition:border-color .2s, color .2s;
 }
 .lede a:hover{ color:var(--amber); border-color:var(--amber); }
+.work-link{ text-decoration:none; border-bottom:1px solid rgba(255,180,84,.45); transition:border-color .2s, color .2s; }
+.work-link:hover{ color:var(--amber); border-color:var(--amber); }
 
 .hero-actions{ display:flex; flex-wrap:wrap; gap:14px; margin-bottom:64px; }
 
