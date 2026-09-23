@@ -20,6 +20,7 @@ const master = require('./_resume');
 const { fetchJob, JobError } = require('./_job');
 const { tailor, GeminiError } = require('./_gemini');
 const { mergeResume, checkCoverLetter } = require('./_validate');
+const { extractKeywords, keywordBrief, coverage } = require('./_keywords');
 const { renderResume, renderCoverLetter } = require('./_pdf');
 
 const DOC_TTL = 24 * 3600;
@@ -77,7 +78,25 @@ function diffList(original, tailored) {
   return rows;
 }
 
-function resultPage({ id, role, company, notes, warnings, changes, fits, model }) {
+/**
+ * The honest scoreboard: of the words this posting screens on and the resume
+ * can actually back, how many made it onto the page?
+ */
+function coverageSection(cov, missing) {
+  if (!cov.length && !missing.length) return '';
+  const hit = cov.filter((k) => k.present);
+  const miss = cov.filter((k) => !k.present);
+  const pct = cov.length ? Math.round((hit.length / cov.length) * 100) : 0;
+  const chips = (list, cls) => list.map((k) => `<li class="kw ${cls}">${esc(k.term)}</li>`).join('');
+
+  return `  <section class="cover">
+    <h2>Keyword coverage</h2>
+    <p class="score"><b>${hit.length}/${cov.length}</b> <span>of this posting's keywords that your resume can back are on the page (${pct}%)</span></p>
+${hit.length ? `    <ul class="kws">${chips(hit, 'hit')}</ul>\n` : ''}${miss.length ? `    <p class="fine">Earned but not on the page - worth a manual edit: </p>\n    <ul class="kws">${chips(miss, 'miss')}</ul>\n` : ''}${missing.length ? `    <p class="fine">The posting also asks for ${missing.map((k) => `<b>${esc(k.term)}</b>`).join(', ')} - not on your resume, so it was deliberately left out.</p>\n` : ''}  </section>
+`;
+}
+
+function resultPage({ id, role, company, notes, warnings, changes, coverage: cov = [], missing = [], fits, model }) {
   const w = [...warnings];
   if (!fits) w.unshift('The resume ran slightly past one page even at the smallest size. Open it and check the bottom.');
   return page(`Tailored - ${company || 'job'}`, `  <h1>Ready</h1>
@@ -87,7 +106,7 @@ function resultPage({ id, role, company, notes, warnings, changes, fits, model }
     <a class="btn secondary" href="/tailor/dl/${id}/cover">Cover letter PDF</a>
   </div>
   <p class="fine">Links expire in 24 hours.${model ? ` Written by ${esc(model)}.` : ''}</p>
-${notes ? `  <section>\n    <h2>What it emphasized</h2>\n    <p>${esc(notes)}</p>\n  </section>\n` : ''}${w.length ? `  <section class="warn">\n    <h2>Check before sending</h2>\n    <ul>\n${w.map((x) => `      <li>${esc(x)}</li>`).join('\n')}\n    </ul>\n  </section>\n` : ''}  <section>
+${coverageSection(cov, missing)}${notes ? `  <section>\n    <h2>What it emphasized</h2>\n    <p>${esc(notes)}</p>\n  </section>\n` : ''}${w.length ? `  <section class="warn">\n    <h2>Check before sending</h2>\n    <ul>\n${w.map((x) => `      <li>${esc(x)}</li>`).join('\n')}\n    </ul>\n  </section>\n` : ''}  <section>
     <details>
       <summary>${changes.length ? `${changes.length} bullet${changes.length === 1 ? '' : 's'} reworded` : 'No bullets reworded - only reordered'}</summary>
 ${changes.length ? `      <ul class="diff">\n${changes.join('\n')}\n      </ul>` : ''}
@@ -164,15 +183,17 @@ module.exports = async (req, res) => {
 
   try {
     const job = await fetchJob(url);
+    const keywords = extractKeywords(job.text, master, { company: job.company });
     const out = await tailor(master, job, {
       key: process.env.GEMINI_API_KEY,
       model: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
+      brief: keywordBrief(keywords),
     });
 
     const company = String(out.company || job.company || '').trim();
     const role = String(out.role || job.title || '').trim();
 
-    const { resume, warnings } = mergeResume(master, out);
+    const { resume, warnings } = mergeResume(master, out, keywords.backed.map((k) => k.term));
     const cl = checkCoverLetter(master, out.coverLetter, job.text, company);
     if (!cl.ok) throw new GeminiError(cl.warnings[0]);
     warnings.push(...cl.warnings);
@@ -201,6 +222,8 @@ module.exports = async (req, res) => {
       notes: String(out.notes || '').trim(),
       warnings,
       changes: diffList(master, resume),
+      coverage: coverage(keywords.backed, resume),
+      missing: keywords.forbidden,
       fits: rPdf.fits,
       model: out.model,
     }));

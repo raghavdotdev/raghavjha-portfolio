@@ -72,6 +72,28 @@ function ownershipIn(text) {
   return new Set(words.filter((w) => OWNERSHIP.includes(w)));
 }
 
+// Ownership, ranked. A rewrite may keep the level; it may not move up
+// (dishonest) or down (the model quietly giving away credit Raghav earned -
+// "Led security hardening" coming back as "Contributed to security hardening").
+const LEVELS = [
+  [1, ['contributed', 'participated', 'assisted', 'helped', 'supported', 'collaborated']],
+  [2, ['co-developed', 'co-designed', 'co-founded', 'co-authored']],
+  [3, ['built', 'developed', 'designed', 'implemented', 'created', 'integrated', 'refactored', 'automated', 'deployed', 'wrote', 'shipped', 'migrated', 'optimized', 'delivered']],
+  [4, ['led', 'architected', 'spearheaded', 'owned', 'headed', 'directed', 'drove', 'managed', 'founded', 'pioneered']],
+];
+
+/** The strongest ownership claim the text makes, 0 if it makes none. */
+function ownershipLevel(text) {
+  const t = String(text).toLowerCase();
+  let best = 0;
+  for (const [rank, verbs] of LEVELS) {
+    for (const v of verbs) {
+      if (new RegExp(`(?<![a-z-])${v.replace('-', '-')}(?![a-z])`, 'i').test(t)) best = Math.max(best, rank);
+    }
+  }
+  return best;
+}
+
 // "Co-developed" -> "Developed", "Contributed to building" -> "Built"
 function droppedHedge(orig, rewrite) {
   const o = orig.toLowerCase(); const r = rewrite.toLowerCase();
@@ -87,7 +109,7 @@ function droppedHedge(orig, rewrite) {
 /**
  * @returns {string|null} reason the rewrite is rejected, or null if it's OK.
  */
-function checkBullet(original, rewrite) {
+function checkBullet(original, rewrite, keywords = []) {
   const r = String(rewrite || '').trim();
   if (!r) return 'empty';
   if (r.length > Math.max(230, original.length * 1.3)) return 'too long';
@@ -107,12 +129,36 @@ function checkBullet(original, rewrite) {
   const hedges = droppedHedge(original, r);
   if (hedges.length) return `dropped "${hedges[0]}"`;
 
+  // Giving away credit is as wrong as taking it. Keep the original's level.
+  const was = ownershipLevel(original);
+  const now = ownershipLevel(r);
+  if (was && now && now < was) return `weakened ownership (level ${was} -> ${now})`;
+  if (was >= 3 && !now) return 'dropped the action verb';
+
+  // A tool named in the original is a keyword a reviewer searches for.
+  // Losing it to smoother prose is a downgrade, not a rewrite.
+  const lostTech = [...origTech].filter((t) => !techIn(r).has(t));
+  if (lostTech.length) return `dropped ${lostTech.join(', ')}`;
+
+  // Same for a named thing: "Chrome extension", "PDF-to-Excel", "Firestore".
+  const proper = (s) => new Set((String(s).match(/(?<!^)(?<![.!?]\s)\b[A-Z][A-Za-z0-9]*(?:[-/.][A-Za-z0-9]+)*/g) || [])
+    .map((x) => x.toLowerCase()).filter((x) => x.length > 2));
+  const lostNames = [...proper(original)].filter((x) => !proper(r).has(x) && !String(r).toLowerCase().includes(x));
+  if (lostNames.length) return `dropped "${lostNames[0]}"`;
+
+  // The posting's own words, where this bullet already had them. Trading one
+  // of these for smoother prose is the exact failure this tool exists to
+  // avoid - it is what a reviewer searches for.
+  const carries = (text, kw) => new RegExp(`(?<![A-Za-z0-9+#])${String(kw).replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/[\s-]+/g, '[\\s-]+')}(?![A-Za-z0-9+#])`, 'i').test(text);
+  const lostKw = keywords.filter((k) => carries(original, k) && !carries(r, k));
+  if (lostKw.length) return `dropped the posting's word "${lostKw[0]}"`;
+
   return null;
 }
 
 // ------------------------------------------------------------ merge
 
-function mergeBullets(masterItem, outItem, warnings, label) {
+function mergeBullets(masterItem, outItem, warnings, label, keywords = []) {
   const byId = new Map(masterItem.bullets.map((b) => [b.id, b]));
   const used = new Set();
   const result = [];
@@ -121,7 +167,7 @@ function mergeBullets(masterItem, outItem, warnings, label) {
     const orig = ob && byId.get(ob.id);
     if (!orig || used.has(ob.id)) continue; // unknown or duplicate id - ignore
     used.add(ob.id);
-    const why = checkBullet(orig.text, ob.text);
+    const why = checkBullet(orig.text, ob.text, keywords);
     if (why) {
       warnings.push(`${label}: kept original wording for one bullet (rewrite ${why}).`);
       result.push({ id: orig.id, text: orig.text });
@@ -139,7 +185,7 @@ function mergeBullets(masterItem, outItem, warnings, label) {
   return result;
 }
 
-function mergeResume(master, out) {
+function mergeResume(master, out, keywords = []) {
   const warnings = [];
   const o = out || {};
   const outExp = new Map((Array.isArray(o.experience) ? o.experience : []).map((e) => [e && e.id, e]));
@@ -148,7 +194,7 @@ function mergeResume(master, out) {
   // Experience: always master order (reverse-chronological) and master metadata.
   const experience = master.experience.map((job) => ({
     ...job,
-    bullets: mergeBullets(job, outExp.get(job.id), warnings, job.company),
+    bullets: mergeBullets(job, outExp.get(job.id), warnings, job.company, keywords),
   }));
 
   // Projects: model's order, known ids only, then any it left out.
@@ -159,7 +205,7 @@ function mergeResume(master, out) {
   const outProjById = new Map(outProj.map((p) => [p && p.id, p]));
   const projects = order.map((id) => {
     const p = projById.get(id);
-    return { ...p, bullets: mergeBullets(p, outProjById.get(id), warnings, p.name.split(' — ')[0]) };
+    return { ...p, bullets: mergeBullets(p, outProjById.get(id), warnings, p.name.split(' — ')[0], keywords) };
   });
 
   // Skills: master categories in master order; items must already exist in that category.
@@ -225,4 +271,4 @@ function checkCoverLetter(master, cl, jobText, company = '') {
   };
 }
 
-module.exports = { mergeResume, checkCoverLetter, checkBullet, numbersIn, techIn };
+module.exports = { mergeResume, checkCoverLetter, checkBullet, numbersIn, techIn, TECH, ALIAS, TERM_RES };

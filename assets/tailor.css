@@ -27,3 +27,11 @@ summary{cursor:pointer;font-weight:600;font-size:.95rem}
 .diff del{color:var(--del)}
 .diff ins{color:var(--ins);text-decoration:none}
 a{color:var(--accent)}
+.cover .score{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:0 0 10px}
+.cover .score b{font-size:1.5rem;font-variant-numeric:tabular-nums}
+.cover .score span{color:var(--muted);font-size:.85rem}
+.kws{list-style:none;display:flex;flex-wrap:wrap;gap:6px;padding:0;margin:6px 0 0}
+.kw{font-size:.8rem;padding:3px 9px;border-radius:999px;border:1px solid currentColor;line-height:1.5}
+.kw.hit{color:var(--ins)}
+.kw.miss{color:var(--muted)}
+.cover .fine{margin:14px 0 0}

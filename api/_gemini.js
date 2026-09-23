@@ -26,8 +26,22 @@ WHAT YOU MAY DO:
 - Reorder projects by relevance to the posting.
 - Reorder skills within each category so the most relevant to this posting come first. Keep every skill; never add one or move one between categories.
 
-REWORDING IS THE POINT. Reordering alone is not enough. Work through every bullet and rewrite the ones where the posting describes the same work in different words, or where a detail already in the bullet deserves to lead because the posting asks for it. Expect to rewrite roughly half of them; if you rewrite fewer than three across the whole resume you have almost certainly been too cautious. Leave a bullet alone only when the posting genuinely offers no better framing for it.
-Rewriting means re-framing facts that are already in that bullet - never adding new ones. Rules 1-5 above are absolute and still bind every rewritten bullet.
+WHAT TAILORING ACTUALLY MEANS.
+A resume is screened by looking for the posting's own words. So a rewrite only counts if it puts one of those words on the page. You will be given KEYWORDS THIS POSTING SCREENS ON - the terms the posting screens on, already checked against the resume. That list is the work. Go through it and change the bullets it points at.
+
+A rewrite that swaps a word for a synonym of equal value is worthless. Do not do this:
+  "Contributed to building a full-stack AI-powered fintech platform, spanning a Chrome extension, React/Next.js dashboard, and backend API."
+  -> "Contributed to building end-to-end features for an AI-powered fintech platform, covering a Chrome extension, React/Next.js UI, and backend API."
+That traded "full-stack" (a term this posting screens on) for "end-to-end features", and "dashboard" for "UI". It moved words around and lost ground. A good rewrite of the same bullet keeps "full-stack", keeps "React/Next.js", and spends its freedom on the part the posting actually asks for - naming the dashboard as the user interface, or the backend API as the API he designed.
+
+So, for each bullet:
+- Never delete a term from list A to make room for prose. Those words are why the bullet is there.
+- Prefer the posting's noun for a thing the bullet already describes: "dashboard" -> "user interface" if that is what it was; "invoice classification" -> "document processing" if that is what it was.
+- If the posting offers no better word for a bullet, leave that bullet exactly as written. An unchanged bullet is a fine outcome; a reshuffled one is not.
+
+6. Never weaken ownership either. "Led" must not become "Contributed to", "Designed" must not become "Worked on", "Built" must not become "Helped build". Keep the original verb unless the posting uses a different word for the same level of ownership.
+7. Keep the concrete nouns. If the original says "classification engine", "bank statement", "Chrome extension" or "Next.js", the rewrite still says it. Never trade a specific thing for a vaguer one.
+Rewriting means re-framing facts already in that bullet - never adding new ones. Rules 1-7 are absolute and bind every rewritten bullet.
 
 COVER LETTER:
 - 3 or 4 short paragraphs, 220-320 words total, first person, plain professional Canadian English.
@@ -42,7 +56,7 @@ COVER LETTER:
 
 ALSO RETURN:
 - company and role exactly as the posting names them.
-- notes: 1-2 sentences on what you emphasized, and any major requirement the resume does not cover.`;
+- notes: 1-2 sentences naming which of the posting's keywords the resume now carries, and the biggest requirement it cannot cover.`;
 
 const SCHEMA = {
   type: 'object',
@@ -183,7 +197,7 @@ Rules 1-5 still bind you absolutely: no new numbers, no new tools, no upgraded o
 
 const errMsg = (res) => (res.data.error && res.data.error.message) || String(res.text || '').slice(0, 200);
 
-async function tailor(master, job, { key, model }) {
+async function tailor(master, job, { key, model, brief = '' }) {
   if (!key) throw new GeminiError('GEMINI_API_KEY is not set in Vercel.');
 
   const user = [
@@ -192,6 +206,7 @@ async function tailor(master, job, { key, model }) {
     '',
     `JOB_POSTING (source: ${job.source}; title: ${job.title || 'unknown'}; company: ${job.company || 'unknown'}; location: ${job.location || 'unknown'}):`,
     job.text,
+    ...(brief ? ['', brief] : []),
   ].join('\n');
 
   let nudged = false;      // have we already told it off for copying?
