@@ -156,6 +156,31 @@ async function call(model, key, body, timeoutMs) {
   }
 }
 
+/**
+ * Did the model hand back every bullet copied word-for-word? True only when
+ * bullets came back at all - an empty answer is a different failure, and the
+ * validator deals with that one.
+ */
+function copiedVerbatim(master, out) {
+  const orig = new Map();
+  for (const x of [...master.experience, ...master.projects]) for (const b of x.bullets) orig.set(b.id, b.text.trim());
+  let seen = 0;
+  let changed = 0;
+  for (const group of [...(out.experience || []), ...(out.projects || [])]) {
+    for (const b of (group && group.bullets) || []) {
+      const o = b && orig.get(b.id);
+      if (!o) continue;
+      seen++;
+      if (String(b.text || '').trim() !== o) changed++;
+    }
+  }
+  return seen > 0 && changed === 0;
+}
+
+const NUDGE = `Your previous answer returned every bullet copied word-for-word from MASTER_RESUME. That is a failed response: reordering alone is not tailoring.
+Do it again and actually rewrite. For at least four bullets, re-frame what is already in that bullet using the posting's own vocabulary and priorities - lead with the part this employer cares about, and use their words for it where they describe the same thing.
+Rules 1-5 still bind you absolutely: no new numbers, no new tools, no upgraded ownership verbs, one original bullet per output bullet. Re-frame the existing facts; invent nothing.`;
+
 const errMsg = (res) => (res.data.error && res.data.error.message) || String(res.text || '').slice(0, 200);
 
 async function tailor(master, job, { key, model }) {
@@ -169,10 +194,15 @@ async function tailor(master, job, { key, model }) {
     job.text,
   ].join('\n');
 
+  let nudged = false;      // have we already told it off for copying?
+  let bestLazy = null;     // a valid-but-unchanged answer, kept as a floor
+  let extraTurns = [];
+  let restart = false;     // one-shot: go round again immediately after a nudge
+
   const makeBody = (withSchema) => ({
     systemInstruction: { parts: [{ text: withSchema ? SYSTEM
       : `${SYSTEM}\n\nRespond with ONLY a JSON object matching this JSON Schema:\n${JSON.stringify(SCHEMA)}` }] },
-    contents: [{ role: 'user', parts: [{ text: user }] }],
+    contents: [{ role: 'user', parts: [{ text: user }] }, ...extraTurns],
     generationConfig: {
       temperature: 0.55,
       maxOutputTokens: 8192,
@@ -221,13 +251,32 @@ async function tailor(master, job, { key, model }) {
 
       const parsed = parseJson(text);
       Object.defineProperty(parsed, 'model', { value: m, enumerable: false });
+
+      // Weaker models often just echo the bullets back. Call that out and retry
+      // once from the top of the list; keep whichever attempt tailored more.
+      if (copiedVerbatim(master, parsed)) {
+        if (!nudged && left() > 45000) {
+          nudged = true;
+          bestLazy = parsed;
+          extraTurns = [
+            { role: 'model', parts: [{ text: JSON.stringify(parsed).slice(0, 4000) }] },
+            { role: 'user', parts: [{ text: NUDGE }] },
+          ];
+          restart = true;
+          break; // restart the model list, strongest first
+        }
+        if (bestLazy) return bestLazy;
+      }
       return parsed;
     }
     if (models.every((m) => dead.has(m))) break;
+    if (restart) { restart = false; round--; continue; } // the nudge retry gets a free pass, no backoff
     const wait = ROUND_WAITS_MS[round];
     if (wait === undefined || left() < wait + 20000) break;
     await sleep(wait);
   }
+
+  if (bestLazy) return bestLazy;
 
   const secs = Math.round((Date.now() - started) / 1000);
   const statuses = [...lastStatus.values()];
