@@ -25,7 +25,9 @@ WHAT YOU MAY DO:
 - Drop at most one clearly irrelevant bullet per role; keep at least 2 bullets for any role that has 2 or more.
 - Reorder projects by relevance to the posting.
 - Reorder skills within each category so the most relevant to this posting come first. Keep every skill; never add one or move one between categories.
-- Leave a bullet exactly as written if it is already the best version. That is often the right call.
+
+REWORDING IS THE POINT. Reordering alone is not enough. Work through every bullet and rewrite the ones where the posting describes the same work in different words, or where a detail already in the bullet deserves to lead because the posting asks for it. Expect to rewrite roughly half of them; if you rewrite fewer than three across the whole resume you have almost certainly been too cautious. Leave a bullet alone only when the posting genuinely offers no better framing for it.
+Rewriting means re-framing facts that are already in that bullet - never adding new ones. Rules 1-5 above are absolute and still bind every rewritten bullet.
 
 COVER LETTER:
 - 3 or 4 short paragraphs, 220-320 words total, first person, plain professional Canadian English.
@@ -172,7 +174,7 @@ async function tailor(master, job, { key, model }) {
       : `${SYSTEM}\n\nRespond with ONLY a JSON object matching this JSON Schema:\n${JSON.stringify(SCHEMA)}` }] },
     contents: [{ role: 'user', parts: [{ text: user }] }],
     generationConfig: {
-      temperature: 0.4,
+      temperature: 0.55,
       maxOutputTokens: 8192,
       responseMimeType: 'application/json',
       ...(withSchema ? { responseSchema: SCHEMA } : {}),
